@@ -1,11 +1,11 @@
 # pyuic5 -o gui.py untitled.ui
 import cv2, sys, yaml, os, torch, time
 import numpy as np
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6 import QtGui
+from PyQt6.QtGui import QImage
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 from gui import Ui_Dialog
-from PIL import Image
 from yolo import yolov5, yolov7
 
 def resize_img(img, img_size=600, value=[255, 255, 255], inter=cv2.INTER_AREA):
@@ -16,7 +16,8 @@ def resize_img(img, img_size=600, value=[255, 255, 255], inter=cv2.INTER_AREA):
     delta_h, delta_w = img_size - new_shape[0], img_size - new_shape[1]
     top, bottom = delta_h // 2, delta_h - delta_h // 2
     left, right = delta_w // 2, delta_w - delta_w // 2
-    img = cv2.copyMakeBorder(img, int(top), int(bottom), int(left), int(right), borderType=cv2.BORDER_CONSTANT,
+    img = cv2.copyMakeBorder(img, int(top), int(bottom), int(left), int(right), 
+                             borderType=cv2.BORDER_CONSTANT,
                              value=value)
     return img
 
@@ -55,15 +56,15 @@ class MyForm(QDialog):
     def read_and_show_image_from_path(self, image_path):
         image = cv2.imdecode(np.fromfile(image_path, np.uint8), cv2.IMREAD_COLOR)
         resize_image = cv2.cvtColor(resize_img(image), cv2.COLOR_RGB2BGR)
-        self.ui.label_ori.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QtGui.QImage.Format_RGB888)))
+        self.ui.label_ori.setPixmap(QtGui.QPixmap.fromImage(QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QImage.Format.Format_RGB888)))
         return image
     
     def show_image_from_array(self, image, ori=False, det=False):
         resize_image = cv2.cvtColor(resize_img(image), cv2.COLOR_RGB2BGR)
         if ori:
-            self.ui.label_ori.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QtGui.QImage.Format_RGB888)))
+            self.ui.label_ori.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QImage.Format.Format_RGB888)))
         if det:
-            self.ui.label_det.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QtGui.QImage.Format_RGB888)))
+            self.ui.label_det.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(resize_image.data, resize_image.shape[1], resize_image.shape[0], QImage.Format.Format_RGB888)))
     
     def show_message(self, message):
         QMessageBox.information(self, "提示", message, QMessageBox.Ok)
@@ -189,10 +190,10 @@ class MyForm(QDialog):
             self._timer.timeout.connect(self.show_folder)
             self._timer.start(20)
         else:
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             since = time.time()
             image_det, result = self.model(self.now)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             end = time.time()
             cv2.imencode(".jpg", image_det)[1].tofile(os.path.join(self.save_path, f'{self.save_id}.jpg'))
             self.ui.textBrowser.append(f'time:{end-since:.5f}s save image in {os.path.join(self.save_path, f"{self.save_id}.jpg")}' + self.analyse_result(result))
@@ -216,10 +217,10 @@ class MyForm(QDialog):
         else:
             img_path = self.now[0]
             image = self.read_and_show_image_from_path(img_path)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             since = time.time()
             image_det, result = self.model(image)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             end = time.time()
             cv2.imencode(".jpg", image_det)[1].tofile(os.path.join(self.save_path, f'{self.save_id}.jpg'))
             self.ui.textBrowser.append(f'time:{end-since:.5f}s {self.print_id}/{self.folder_len} save image in {os.path.join(self.save_path, f"{self.save_id}.jpg")}' + self.analyse_result(result))
@@ -232,12 +233,12 @@ class MyForm(QDialog):
         flag, image = self.now.read()
         if flag:
             self.show_image_from_array(image, ori=True)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             since = time.time()
             image_det, result = self.model(image.copy())
             if self.ui.comboBox.currentText() != 'NoTrack':
                 image_det = self.model.track_processing(image.copy(), result)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available(): torch.cuda.synchronize()
             end = time.time()
             self.out.write(image_det)
             self.show_image_from_array(image_det, det=True)
@@ -263,4 +264,4 @@ if __name__ == '__main__':
     
     app = QApplication(sys.argv)
     w = MyForm(title=gui_title, textBrowser_size=textBrowser_size)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
