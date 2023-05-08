@@ -25,7 +25,7 @@ class base_model:
         device = self.select_device(device)
         print(device)
         if model_path.endswith('pt'):
-            model = torch.jit.load(model_path).to(device)
+            model = torch.jit.load(model_path, map_location='cpu').to(device)
         elif model_path.endswith('onnx'):
             try:
                 import onnxruntime as ort
